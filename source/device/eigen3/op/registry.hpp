@@ -21,9 +21,9 @@ public:
         return registry;
     }
 
-    void Register(int const op, std::function<Eigen3Op*(struct node*)>& creator)
+    void Register(int const op, std::function<Eigen3Op*(struct node*)>&& creator)
     {
-        creators_[op] = creator;
+        creators_[op] = std::move(creator);
         op_types_.insert(op);
     }
 
@@ -58,7 +58,7 @@ class Eigen3OpRegisterHelper
 public:
     Eigen3OpRegisterHelper()
     {
-        Eigen3OpRegistry::Instance().Register([](struct node* ir) { return T(ir); });
+        Eigen3OpRegistry::Instance().Register(T::type, [](struct node* ir) { return new T(ir); });
     };
 };
 

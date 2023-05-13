@@ -19,7 +19,7 @@ public:
         return p;
     }
 
-    ~Eigen3Allocator()
+    virtual ~Eigen3Allocator()
     {
         for (auto* p : blocks_)
         {
@@ -45,6 +45,7 @@ public:
     }
 
     virtual int Compute() = 0;
+    virtual ~Eigen3Op() = default;
 
 private:
     struct node* ir_;

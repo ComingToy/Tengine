@@ -14,6 +14,7 @@ extern "C" {
 class Eigen3ReluOp : public Eigen3Op
 {
 public:
+    constexpr static int type = OP_RELU;
     explicit Eigen3ReluOp(struct node* ir)
         : Eigen3Op(ir)
     {

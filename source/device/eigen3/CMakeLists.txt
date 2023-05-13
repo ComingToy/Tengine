@@ -28,7 +28,7 @@ LIST (APPEND _DEV_EIGEN3_DEVICE_SOURCE    ${_EIGEN3_OPS_SOURCE})
 
 # 5.  add build options for cpu device
 # 5.1 is a gcc or clang like compiler
-LIST (APPEND _DEV_EIGEN3_COMPILER_OPTIONS -std=c++11)
+# LIST (APPEND _DEV_EIGEN3_COMPILER_OPTIONS -std=c++11)
 
 
 # 5.2 is Microsoft Visual C++

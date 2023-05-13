@@ -69,6 +69,12 @@ public:
         return 0;
     }
 
+    int PostRun()
+    {
+        ResetAllocator();
+        return 0;
+    }
+
 private:
     struct subgraph* subgraph_;
     std::vector<std::unique_ptr<Eigen3Op> > nodes_;
