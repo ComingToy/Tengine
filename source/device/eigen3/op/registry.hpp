@@ -49,7 +49,7 @@ private:
     Eigen3OpRegistry() = default;
     ~Eigen3OpRegistry() = default;
     std::map<int, std::function<Eigen3Op*(struct node*)> > creators_;
-    std::set<int> op_types_;
+    std::set<int> op_types_ = {OP_CONST};
 };
 
 template<typename T>

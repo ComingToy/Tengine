@@ -28,6 +28,7 @@ public:
         for (auto i = 0; i < subgraph_->node_num; ++i)
         {
             auto ir = get_ir_graph_node(subgraph_->graph, subgraph_->node_list[i]);
+            if (ir->op.type == OP_CONST) continue;
             auto op = Eigen3OpRegistry::Instance().CreateOp(ir);
             nodes_.emplace_back(op);
         }

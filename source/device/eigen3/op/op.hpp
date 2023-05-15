@@ -44,6 +44,7 @@ public:
         return ir_;
     }
 
+    virtual const int Type() const = 0;
     virtual int Compute() = 0;
     virtual ~Eigen3Op() = default;
 
@@ -51,3 +52,19 @@ private:
     struct node* ir_;
 };
 
+template<typename T>
+class Eigen3OpBase : public Eigen3Op
+{
+public:
+    explicit Eigen3OpBase(struct node* ir)
+        : Eigen3Op(ir)
+    {
+    }
+
+    virtual ~Eigen3OpBase() = default;
+
+    const int Type() const override
+    {
+        return T::type;
+    }
+};
