@@ -16,6 +16,8 @@ extern "C" {
 #include "operator/prototype/convolution_param.h"
 #include "graph/tensor.h"
 #include "graph/graph.h"
+extern int ref_conv_fp32(struct tensor* input_tensor, struct tensor* output_tensor, struct tensor* kernel,
+                         struct tensor* bias, struct conv_param* conv_param);
 #ifdef __cplusplus
 }
 #endif
@@ -55,9 +57,11 @@ public:
         params->kernel_w = std::max(1, params->kernel_w);
 
         const float* bias = NULL;
+        struct tensor* bias_tensor = NULL;
         if (Node()->input_num > 2)
         {
-            auto* bias_tensor = get_ir_graph_tensor(Node()->graph, Node()->input_tensors[2]);
+            bias_tensor = get_ir_graph_tensor(Node()->graph, Node()->input_tensors[2]);
+
             bias = (float*)bias_tensor->data;
         }
 
@@ -72,7 +76,7 @@ public:
 #endif
 
         Eigen::TensorMap<Eigen::Tensor<float, 5, Eigen::RowMajor> > input_tensor_map((float*)input_tensor->data, in_dims);
-        Eigen::TensorMap<Eigen::Tensor<float, 5> > output_tensor_map((float*)output_tensor->data, out_dims);
+        Eigen::TensorMap<Eigen::Tensor<float, 5, Eigen::RowMajor>> output_tensor_map((float*)output_tensor->data, out_dims);
         Eigen::TensorMap<Eigen::Tensor<float, 5, Eigen::RowMajor> > kernel_tensor_map((float*)kernel_tensor->data, kernel_dims);
 
         // TODO(conley): implement conv with Eigen::Tensor::convole
@@ -94,7 +98,7 @@ public:
                             // TODO(conley): fix here. handle padding and strides
 
 #if 0
-                            if (params->dilation_h > 0 || params->dilation_w > 0)
+                            if (params->dilation_h > 1 || params->dilation_w > 1)
                             {
                                 printf("here\n");
                             }
@@ -175,7 +179,7 @@ public:
                                           << std::endl;
                                 std::cerr << "ir node " << output_tensor->name << ", input slice " << input_slice << ", kernel slice " << kernel_slice << std::endl;
 #else
-                                fprintf(stderr, "output tensor %s conv output at (%d, %d, %d, %d, %d) = %.5e\n", output_tensor->name, b, g, c, h, w, total);
+                                // fprintf(stderr, "output tensor %s conv output at (%d, %d, %d, %d, %d) = %.5e\n", output_tensor->name, b, g, c, h, w, total);
 #endif
                             }
                             if (bias) total += bias[g * output_c + c];
@@ -206,6 +210,10 @@ public:
                 }
             }
         }
+
+        std::cerr << "eigen3 output tensor " << output_tensor->name << ": " << output_tensor_map.eval().mean() << std::endl;
+        // ref_conv_fp32(input_tensor, output_tensor, kernel_tensor, bias_tensor, params);
+        // std::cerr << "cpu output tensor " << output_tensor->name << ": " << output_tensor_map.mean() << std::endl;
         return 0;
     }
 #endif
