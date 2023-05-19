@@ -1,3 +1,5 @@
+#define EIGEN_DONT_PARALLELIZE 1
+
 #include "op.hpp"
 #include "op/registry.hpp"
 #include <array>
@@ -7,6 +9,8 @@
 #include <memory>
 #include <vector>
 #include <iostream>
+
+#define __unlikely(x) __builtin_expect(!!(x), 0)
 
 #ifdef __cplusplus
 extern "C" {
@@ -67,25 +71,28 @@ public:
                 Eigen::Map<Eigen::VectorXf> bias(bias_data, output_c);
                 if (activation >= 0)
                 {
-                    output = ((kernel * input).colwise() + bias).unaryExpr([activation](float total) {
-                        if (total < 0 && activation != 1)
-                        {
-                            total = 0;
-                        }
-                        if (total > 1 && activation == 1)
-                        {
-                            total = 1;
-                        }
-                        if (total > 6 && activation == 6)
-                        {
-                            total = 6;
-                        }
-                        if (total < -1 && activation == 1)
-                        {
-                            total = -1;
-                        }
-                        return total;
-                    });
+                    output = ((kernel * input).colwise() + bias)
+#if 1
+                                 .unaryExpr([activation](float total) {
+                                     if (total < 0 && activation != 1)
+                                     {
+                                         total = 0;
+                                     }
+                                     if (total > 1 && activation == 1)
+                                     {
+                                         total = 1;
+                                     }
+                                     if (total > 6 && activation == 6)
+                                     {
+                                         total = 6;
+                                     }
+                                     if (total < -1 && activation == 1)
+                                     {
+                                         total = -1;
+                                     }
+                                     return total;
+                                 });
+#endif
                 }
                 else
                 {
@@ -121,6 +128,15 @@ private:
         const auto output_h = out_dims[2];
         const auto output_w = out_dims[3];
 
+        const auto kernel_w = params_->kernel_w;
+        const auto kernel_h = params_->kernel_h;
+        const auto stride_h = params_->stride_h;
+        const auto stride_w = params_->stride_w;
+        const auto dilation_h = params_->dilation_h;
+        const auto dilation_w = params_->dilation_w;
+        const auto pad_h0 = params_->pad_h0;
+        const auto pad_w0 = params_->pad_w0;
+
         const auto* p = reinterpret_cast<float*>(input_tensor_->data);
         const auto* data = p + batch * params_->group * input_c * input_h * input_w
                            + group * input_c * input_h * input_w;
@@ -130,32 +146,27 @@ private:
         for (int c = 0; c < input_c; ++c)
         {
             const auto* src = data + c * input_h * input_w;
-            auto* output_data = output_buf + c * params_->kernel_h * params_->kernel_w * feat_map_size_;
-            for (int h = 0; h < output_h; ++h)
+            auto* output_data = output_buf + c * kernel_h * kernel_w * feat_map_size_;
+            for (int output_col = 0; output_col < feat_map_size_; ++output_col)
             {
-                for (int w = 0; w < output_w; ++w)
+                const auto h = output_col / output_w;
+                const auto w = output_col % output_w;
+                const int h_start = (h * stride_h) - pad_h0;
+                const int w_start = (w * stride_w) - pad_w0;
+                for (int output_row = 0; output_row < kernel_h * kernel_w; ++output_row)
                 {
-                    const int buf_w = h * output_w + w;
-                    const int h_start = (h * params_->stride_h) - params_->pad_h0;
-                    const int w_start = (w * params_->stride_w) - params_->pad_w0;
+                    const auto kh = output_row / kernel_w;
+                    const auto kw = output_row % kernel_w;
+                    const int h_input = h_start + kh * dilation_h;
+                    const int w_input = w_start + kw * dilation_w;
 
-                    for (int kh = 0; kh < params_->kernel_h; ++kh)
+                    if (__unlikely(h_input < 0) || __unlikely(w_input < 0))
                     {
-                        for (int kw = 0; kw < params_->kernel_w; ++kw)
-                        {
-                            const int h_input = h_start + kh * params_->dilation_h;
-                            const int w_input = w_start + kw * params_->dilation_w;
-                            const int buf_h = kh * params_->kernel_w + kw;
-
-                            if (h_input < 0 || w_input < 0)
-                            {
-                                output_data[buf_h * feat_map_size_ + buf_w] = .0f;
-                                continue;
-                            }
-                            auto val = src[h_input * input_w + w_input];
-                            output_data[buf_h * feat_map_size_ + buf_w] = val;
-                        }
+                        output_data[output_row * feat_map_size_ + output_col] = .0f;
+                        continue;
                     }
+                    auto val = src[h_input * input_w + w_input];
+                    output_data[output_row * feat_map_size_ + output_col] = val;
                 }
             }
         }
