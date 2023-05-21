@@ -71,7 +71,7 @@ public:
                 Eigen::Map<Eigen::VectorXf> bias(bias_data, output_c);
                 if (activation >= 0)
                 {
-                    output = ((kernel * input).colwise() + bias)
+                    output = ((kernel * input.transpose()).colwise() + bias)
 #if 1
                                  .unaryExpr([activation](float total) {
                                      if (total < 0 && activation != 1)
@@ -96,7 +96,7 @@ public:
                 }
                 else
                 {
-                    output = (kernel * input).colwise() + bias;
+                    output = (kernel * input.transpose()).colwise() + bias;
                 }
 #if 0
 extern int ref_conv_fp32(struct tensor* input_tensor, struct tensor* output_tensor, struct tensor* kernel,
@@ -142,36 +142,39 @@ private:
                            + group * input_c * input_h * input_w;
 
         auto* output_buf = reinterpret_cast<float*>(im2col_buf_.data());
+        const int kernel_area = kernel_h * kernel_w;
 
         for (int c = 0; c < input_c; ++c)
         {
             const auto* src = data + c * input_h * input_w;
-            auto* output_data = output_buf + c * kernel_h * kernel_w * feat_map_size_;
-            for (int output_col = 0; output_col < feat_map_size_; ++output_col)
+            const int offset = c * kernel_area;
+            for (int output_row = 0; output_row < feat_map_size_; ++output_row)
             {
-                const auto h = output_col / output_w;
-                const auto w = output_col % output_w;
+                const auto h = output_row / output_w;
+                const auto w = output_row % output_w;
                 const int h_start = (h * stride_h) - pad_h0;
                 const int w_start = (w * stride_w) - pad_w0;
-                for (int output_row = 0; output_row < kernel_h * kernel_w; ++output_row)
+                auto* output_data = output_buf + output_row * kernel_size_ + offset;
+
+                for (int output_col = 0; output_col < kernel_area; ++output_col)
                 {
-                    const auto kh = output_row / kernel_w;
-                    const auto kw = output_row % kernel_w;
+                    const auto kh = output_col / kernel_w;
+                    const auto kw = output_col % kernel_w;
                     const int h_input = h_start + kh * dilation_h;
                     const int w_input = w_start + kw * dilation_w;
 
                     if (__unlikely(h_input < 0) || __unlikely(w_input < 0))
                     {
-                        output_data[output_row * feat_map_size_ + output_col] = .0f;
+                        output_data[output_col] = .0f;
                         continue;
                     }
                     auto val = src[h_input * input_w + w_input];
-                    output_data[output_row * feat_map_size_ + output_col] = val;
+                    output_data[output_col] = val;
                 }
             }
         }
 
-        return MatrixWrap(output_buf, kernel_size_, feat_map_size_);
+        return MatrixWrap(output_buf, feat_map_size_, kernel_size_);
     }
     struct tensor* kernel_tensor_;
     struct tensor* input_tensor_;
