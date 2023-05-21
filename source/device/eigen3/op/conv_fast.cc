@@ -1,3 +1,4 @@
+#include <cstring>
 #define EIGEN_DONT_PARALLELIZE 1
 
 #include "op.hpp"
@@ -116,7 +117,7 @@ extern int ref_conv_fp32(struct tensor* input_tensor, struct tensor* output_tens
 
 private:
     using MatrixWrap = Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >;
-    MatrixWrap im2col_(int const batch, int const group)
+    MatrixWrap __attribute__((noinline)) im2col_(int const batch, int const group)
     {
         const auto in_dims = input_tensor_->dims;
         const auto out_dims = output_tensor_->dims;
@@ -152,24 +153,58 @@ private:
             {
                 const auto h = output_row / output_w;
                 const auto w = output_row % output_w;
-                const int h_start = (h * stride_h) - pad_h0;
+                int h_start = (h * stride_h) - pad_h0;
                 const int w_start = (w * stride_w) - pad_w0;
                 auto* output_data = output_buf + output_row * kernel_size_ + offset;
 
-                for (int output_col = 0; output_col < kernel_area; ++output_col)
+                for (int output_col = 0; output_col < kernel_area; output_col += kernel_w, h_start += dilation_h)
                 {
                     const auto kh = output_col / kernel_w;
-                    const auto kw = output_col % kernel_w;
-                    const int h_input = h_start + kh * dilation_h;
-                    const int w_input = w_start + kw * dilation_w;
 
-                    if (__unlikely(h_input < 0) || __unlikely(w_input < 0))
+                    //FIX dilation_w
+                    if (__unlikely(h_start < 0))
                     {
-                        output_data[output_col] = .0f;
-                        continue;
+#if 0
+                        for (int k = 0; k < kernel_w; ++k)
+                        {
+                            pdst[k] = .0f;
+                        }
+#else
+                        memset(output_data + output_col, 0, sizeof(float) * kernel_w);
+#endif
                     }
-                    auto val = src[h_input * input_w + w_input];
-                    output_data[output_col] = val;
+                    else if (__unlikely(w_start < 0))
+                    {
+#if 0
+						for(int k = 0; k < -w_start; ++k)
+						{
+							pdst[k] = .0f;
+						}
+#else
+
+                        memset(output_data + output_col, 0, sizeof(float) * (-w_start));
+#endif
+#if 0
+                        pdst -= w_start;
+
+                        const auto* psrc = src + h_start * input_w;
+                        for (int k = 0; k < kernel_w + w_start; ++k)
+                        {
+                            pdst[k] = psrc[k];
+                        }
+#else
+                        memcpy(output_data + output_col - w_start, src + h_start * input_h, sizeof(float) * (kernel_w + w_start));
+#endif
+                    }
+                    else
+                    {
+                        auto* pdst = output_data + output_col;
+                        const auto* psrc = src + h_start * input_h + w_start;
+                        for (int k = 0; k < kernel_w; ++k)
+                        {
+                            pdst[k] = psrc[k];
+                        }
+                    }
                 }
             }
         }
