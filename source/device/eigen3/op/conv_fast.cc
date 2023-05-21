@@ -12,6 +12,7 @@
 #include <iostream>
 
 #define __unlikely(x) __builtin_expect(!!(x), 0)
+#define __likely(x)   __builtin_expect(!!(x), 1)
 
 #ifdef __cplusplus
 extern "C" {
@@ -149,61 +150,57 @@ private:
         {
             const auto* src = data + c * input_h * input_w;
             const int offset = c * kernel_area;
+
             for (int output_row = 0; output_row < feat_map_size_; ++output_row)
             {
                 const auto h = output_row / output_w;
                 const auto w = output_row % output_w;
                 int h_start = (h * stride_h) - pad_h0;
+                //FIXME(conley): unroll output_row with factor stride_w then one muli instruction could be reduce
                 const int w_start = (w * stride_w) - pad_w0;
                 auto* output_data = output_buf + output_row * kernel_size_ + offset;
+
+                const auto opt_factor1 = h_start * input_h;
 
                 for (int output_col = 0; output_col < kernel_area; output_col += kernel_w, h_start += dilation_h)
                 {
                     const auto kh = output_col / kernel_w;
 
-                    //FIX dilation_w
+                    //FIXME(conley) dilation_w
                     if (__unlikely(h_start < 0))
                     {
-#if 0
-                        for (int k = 0; k < kernel_w; ++k)
-                        {
-                            pdst[k] = .0f;
-                        }
-#else
                         memset(output_data + output_col, 0, sizeof(float) * kernel_w);
-#endif
                     }
                     else if (__unlikely(w_start < 0))
                     {
-#if 0
-						for(int k = 0; k < -w_start; ++k)
-						{
-							pdst[k] = .0f;
-						}
-#else
-
                         memset(output_data + output_col, 0, sizeof(float) * (-w_start));
-#endif
-#if 0
-                        pdst -= w_start;
-
-                        const auto* psrc = src + h_start * input_w;
-                        for (int k = 0; k < kernel_w + w_start; ++k)
-                        {
-                            pdst[k] = psrc[k];
-                        }
-#else
-                        memcpy(output_data + output_col - w_start, src + h_start * input_h, sizeof(float) * (kernel_w + w_start));
-#endif
+                        memcpy(output_data + output_col - w_start, src + opt_factor1, sizeof(float) * (kernel_w + w_start));
                     }
                     else
                     {
                         auto* pdst = output_data + output_col;
-                        const auto* psrc = src + h_start * input_h + w_start;
-                        for (int k = 0; k < kernel_w; ++k)
+                        const auto* psrc = src + opt_factor1 + w_start;
+
+                        if (__unlikely(kernel_w == 1))
                         {
-                            pdst[k] = psrc[k];
+                            pdst[0] = psrc[0];
                         }
+                        else if (__unlikely(kernel_w == 2))
+                        {
+                            pdst[0] = psrc[0];
+                            pdst[1] = psrc[1];
+                        }
+                        else if (__likely(kernel_w == 3))
+                        {
+                            pdst[0] = psrc[0];
+                            pdst[1] = psrc[1];
+                            pdst[2] = psrc[2];
+                        }
+                        else
+                            for (int k = 0; k < kernel_w; ++k)
+                            {
+                                pdst[k] = psrc[k];
+                            }
                     }
                 }
             }
