@@ -3,7 +3,6 @@
 
 #include "op.hpp"
 #include "op/registry.hpp"
-#include <array>
 #include <eigen3/unsupported/Eigen/CXX11/Tensor>
 #include <eigen3/unsupported/Eigen/CXX11/src/Tensor/Tensor.h>
 #include <eigen3/unsupported/Eigen/CXX11/src/Tensor/TensorMap.h>
@@ -73,8 +72,7 @@ public:
                 Eigen::Map<Eigen::VectorXf> bias(bias_data, output_c);
                 if (activation >= 0)
                 {
-                    output = ((kernel * input.transpose()).colwise() + bias)
-#if 1
+                    output = ((kernel * input).colwise() + bias)
                                  .unaryExpr([activation](float total) {
                                      if (total < 0 && activation != 1)
                                      {
@@ -94,24 +92,11 @@ public:
                                      }
                                      return total;
                                  });
-#endif
                 }
                 else
                 {
-                    output = (kernel * input.transpose()).colwise() + bias;
+                    output = (kernel * input).colwise() + bias;
                 }
-#if 0
-extern int ref_conv_fp32(struct tensor* input_tensor, struct tensor* output_tensor, struct tensor* kernel,
-                         struct tensor* bias, struct conv_param* conv_param);
-                const auto rows = std::min(4, (int)output.rows());
-                const auto cols = std::min(4, (int)output.cols());
-                std::cerr << "ir node: " << Node()->name << " conv mean: " << output.mean()
-                          << ", block example:\n " << output.block(0, 0, rows, cols)
-                          << ", ref mean: ";
-                ref_conv_fp32(input_tensor_, output_tensor_, kernel_tensor_, bias_tensor_, params_);
-                std::cerr << output.mean() << ", block example: \n"
-                          << output.block(0, 0, rows, cols) << std::endl;
-#endif
             }
         return 0;
     }
@@ -144,69 +129,48 @@ private:
                            + group * input_c * input_h * input_w;
 
         auto* output_buf = reinterpret_cast<float*>(im2col_buf_.data());
-        const int kernel_area = kernel_h * kernel_w;
 
-        for (int c = 0; c < input_c; ++c)
+        const auto channels = kernel_w * kernel_w * input_c;
+
+        for (int c = 0; c < channels; ++c)
         {
-            const auto* src = data + c * input_h * input_w;
-            const int offset = c * kernel_area;
+            const int kw = c % kernel_w;
+            int c_ = c / kernel_w;
+            const int kh = c_ % kernel_h;
+            c_ = c_ / kernel_h;
 
-            for (int output_row = 0; output_row < feat_map_size_; ++output_row)
+            const int im_col = kw * dilation_w - pad_w0; // offset along w axis in conv window
+            const auto w_low = std::max(0, -im_col / stride_w + (-im_col % stride_w > 0));
+            const auto w_high = std::min(output_w, (input_w - im_col) / stride_w + ((input_w - im_col) % stride_w > 0));
+
+            for (int h = 0; h < output_h; ++h)
             {
-                const auto h = output_row / output_w;
-                const auto w = output_row % output_w;
-                int h_start = (h * stride_h) - pad_h0;
-                //FIXME(conley): unroll output_row with factor stride_w then one muli instruction could be reduce
-                const int w_start = (w * stride_w) - pad_w0;
-                auto* output_data = output_buf + output_row * kernel_size_ + offset;
+                const int im_row = h * stride_h + kh * dilation_h - pad_h0;
+                float* out = output_buf + (c * output_h + h) * output_w;
+                auto* end = out + w_high;
 
-                const auto opt_factor1 = h_start * input_h;
-
-                for (int output_col = 0; output_col < kernel_area; output_col += kernel_w, h_start += dilation_h)
+                if (__likely(im_row >= 0 && im_row < input_h))
                 {
-                    const auto kh = output_col / kernel_w;
-
-                    //FIXME(conley) dilation_w
-                    if (__unlikely(h_start < 0))
+                    // TODO(conley): why (w_log - 1) * stride_w
+                    //auto* in = data + c_ * input_w * input_h + input_w * im_row + im_col + (w_low - 1) * stride_w;
+                    auto* in = data + input_w * (c_ * input_h + im_row) + im_col + w_low * stride_w;
+                    memset(out, 0, w_low * sizeof(float));
+                    out += w_low;
+                    while (out < end)
                     {
-                        memset(output_data + output_col, 0, sizeof(float) * kernel_w);
+                        (*out++) = *in;
+                        in += stride_w;
                     }
-                    else if (__unlikely(w_start < 0))
-                    {
-                        memset(output_data + output_col, 0, sizeof(float) * (-w_start));
-                        memcpy(output_data + output_col - w_start, src + opt_factor1, sizeof(float) * (kernel_w + w_start));
-                    }
-                    else
-                    {
-                        auto* pdst = output_data + output_col;
-                        const auto* psrc = src + opt_factor1 + w_start;
-
-                        if (__unlikely(kernel_w == 1))
-                        {
-                            pdst[0] = psrc[0];
-                        }
-                        else if (__unlikely(kernel_w == 2))
-                        {
-                            pdst[0] = psrc[0];
-                            pdst[1] = psrc[1];
-                        }
-                        else if (__likely(kernel_w == 3))
-                        {
-                            pdst[0] = psrc[0];
-                            pdst[1] = psrc[1];
-                            pdst[2] = psrc[2];
-                        }
-                        else
-                            for (int k = 0; k < kernel_w; ++k)
-                            {
-                                pdst[k] = psrc[k];
-                            }
-                    }
+                    memset(out, 0, (output_w - w_high) * sizeof(float));
+                }
+                else
+                {
+                    memset(out, 0, output_w * sizeof(float));
                 }
             }
         }
 
-        return MatrixWrap(output_buf, feat_map_size_, kernel_size_);
+        return MatrixWrap(output_buf, kernel_size_, feat_map_size_);
     }
     struct tensor* kernel_tensor_;
     struct tensor* input_tensor_;
