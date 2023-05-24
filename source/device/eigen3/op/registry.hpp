@@ -1,8 +1,10 @@
 #pragma once
+#include <cassert>
 #include <functional>
 #include <map>
 #include "op.hpp"
 #include <set>
+#include <vector>
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,15 +17,17 @@ extern "C" {
 class Eigen3OpRegistry
 {
 public:
+    using CreatorType = std::pair<std::function<int(struct node*)>, std::function<Eigen3Op*(struct node*)> >;
+
     static Eigen3OpRegistry& Instance()
     {
         static Eigen3OpRegistry registry;
         return registry;
     }
 
-    void Register(int const op, std::function<Eigen3Op*(struct node*)>&& creator)
+    void Register(int const op, Eigen3OpRegistry::CreatorType&& creator)
     {
-        creators_[op] = std::move(creator);
+        creators_[op].emplace_back(std::move(creator));
         op_types_.insert(op);
     }
 
@@ -32,12 +36,24 @@ public:
         auto pos = creators_.find(ir->op.type);
         if (pos != creators_.cend())
         {
-            return (pos->second)(ir);
+            auto const& cands = pos->second;
+            auto it = cands.cend();
+            int max_score = -1;
+            for (auto pos = cands.cbegin(); pos < cands.cend(); ++pos)
+            {
+                auto score = pos->first(ir);
+                if (max_score < score)
+                {
+                    it = pos;
+                    max_score = score;
+                }
+            }
+
+            assert(it != cands.cend());
+
+            return it->second(ir);
         }
-        else
-        {
-            return nullptr;
-        }
+        return nullptr;
     }
 
     const std::set<int>& SupportedOps()
@@ -48,7 +64,7 @@ public:
 private:
     Eigen3OpRegistry() = default;
     ~Eigen3OpRegistry() = default;
-    std::map<int, std::function<Eigen3Op*(struct node*)> > creators_;
+    std::map<int, std::vector<CreatorType> > creators_;
     std::set<int> op_types_ = {OP_CONST};
 };
 
@@ -58,7 +74,7 @@ class Eigen3OpRegisterHelper
 public:
     Eigen3OpRegisterHelper()
     {
-        Eigen3OpRegistry::Instance().Register(T::type, [](struct node* ir) { return new T(ir); });
+        Eigen3OpRegistry::Instance().Register(T::type, {T::Score, [](struct node* ir) { return new T(ir); }});
     };
 };
 

@@ -24,6 +24,11 @@ class Eigen3ConvOp : public Eigen3OpBase<Eigen3ConvOp>
 {
 public:
     static constexpr int type = OP_CONV;
+    static int Score(struct node* ir)
+    {
+        return 0;
+    }
+
     explicit Eigen3ConvOp(struct node* ir)
         : Eigen3OpBase(ir)
     {
@@ -68,7 +73,7 @@ public:
         Eigen::array<Eigen::Index, 5> kernel_dims = {group, output_c, input_c, params->kernel_h, params->kernel_w};
 
         Eigen::TensorMap<Eigen::Tensor<float, 5, Eigen::RowMajor> > input_tensor_map((float*)input_tensor->data, in_dims);
-        Eigen::TensorMap<Eigen::Tensor<float, 5, Eigen::RowMajor>> output_tensor_map((float*)output_tensor->data, out_dims);
+        Eigen::TensorMap<Eigen::Tensor<float, 5, Eigen::RowMajor> > output_tensor_map((float*)output_tensor->data, out_dims);
         Eigen::TensorMap<Eigen::Tensor<float, 5, Eigen::RowMajor> > kernel_tensor_map((float*)kernel_tensor->data, kernel_dims);
 
         Eigen::ThreadPool pool(16 /* number of threads in pool */);
@@ -103,7 +108,6 @@ public:
                                 kw_offset = -w_start;
                                 w_extent = w_extent + w_start;
                             }
-
 
                             Eigen::array<Eigen::Index, 5> input_offsets = {b, g, 0, h_offset, w_offset};
                             Eigen::array<Eigen::Index, 5> input_ends = {b + 1, g + 1, input_c, std::min(h_offset + h_extent, input_h), std::min(w_offset + w_extent, input_w)};
@@ -160,4 +164,4 @@ public:
     }
 };
 
-// EIGEN3_REGISTER_OP(Eigen3ConvOp);
+EIGEN3_REGISTER_OP(Eigen3ConvOp);

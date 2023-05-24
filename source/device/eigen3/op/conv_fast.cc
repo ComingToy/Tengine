@@ -51,6 +51,17 @@ public:
         im2col_buf_.resize(kernel_size_ * feat_map_size_);
     }
 
+    static int Score(struct node* ir)
+    {
+        auto params = reinterpret_cast<struct conv_param*>(ir->op.param_mem);
+        if (params->group == 1)
+        {
+            return 2;
+        }
+
+        return 1;
+    }
+
     int Compute() override
     {
         const int output_c = output_tensor_->dims[1] / params_->group;

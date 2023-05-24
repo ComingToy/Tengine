@@ -15,6 +15,11 @@ class Eigen3ReluOp : public Eigen3OpBase<Eigen3ReluOp>
 {
 public:
     constexpr static int type = OP_RELU;
+    static int Score(struct node* ir)
+    {
+        return 0;
+    }
+
     explicit Eigen3ReluOp(struct node* ir)
         : Eigen3OpBase(ir)
     {
@@ -35,6 +40,11 @@ class Eigen3Relu1Op : public Eigen3OpBase<Eigen3Relu1Op>
 {
 public:
     constexpr static int type = OP_RELU1;
+    static int Score(struct node* ir)
+    {
+        return 0;
+    }
+
     explicit Eigen3Relu1Op(struct node* ir)
         : Eigen3OpBase(ir)
     {
