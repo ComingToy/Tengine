@@ -86,7 +86,7 @@ sgemm_4x4_rv64:
 #       // initial biases
         beqz            a0, non_biases
         vsetvli         t0, a0, e32
-        vlw.v           v0, (a0)
+        vle32.v           v0, (a0)
         vrgather.vi     v16, v0, 0
         vrgather.vi     v17, v0, 1
         vrgather.vi     v18, v0, 2
@@ -113,22 +113,22 @@ convoluation_start:
 loop4:  
         addi            t2, t2, -1
         
-        vlw.v           v0, (a1)
+        vle32.v           v0, (a1)
         addi            a1, a1, 16
-        vlw.v           v1, (a1)
+        vle32.v           v1, (a1)
         addi            a1, a1, 16
-        vlw.v           v2, (a1)
+        vle32.v           v2, (a1)
         addi            a1, a1, 16
-        vlw.v           v3, (a1)
+        vle32.v           v3, (a1)
         addi            a1, a1, 16
         
-        vlw.v           v4, (a2)
+        vle32.v           v4, (a2)
         addi            a2, a2, 16
-        vlw.v           v5, (a2)
+        vle32.v           v5, (a2)
         addi            a2, a2, 16
-        vlw.v           v6, (a2)
+        vle32.v           v6, (a2)
         addi            a2, a2, 16
-        vlw.v           v7, (a2)
+        vle32.v           v7, (a2)
         addi            a2, a2, 16
         
         vrgather.vi     v20, v4, 0
@@ -177,10 +177,10 @@ loop4_end:
 loop1:
         addi            t3, t3, -1
         
-        vlw.v           v0, (a1)
+        vle32.v           v0, (a1)
         addi            a1, a1, 16
         
-        vlw.v           v4, (a2)
+        vle32.v           v4, (a2)
         addi            a2, a2, 16
 
         vrgather.vi     v20, v4, 0
@@ -261,10 +261,10 @@ save_result:
         j               end
 
 save_result_nchw:
-        vsw.v           v16, (a4)
-        vsw.v           v17, (t4)
-        vsw.v           v18, (t5)
-        vsw.v           v19, (t6)
+        vse32.v           v16, (a4)
+        vse32.v           v17, (t4)
+        vse32.v           v18, (t5)
+        vse32.v           v19, (t6)
 
 end:
 	ret
