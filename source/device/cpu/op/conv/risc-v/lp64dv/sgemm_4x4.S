@@ -84,8 +84,11 @@
 sgemm_4x4_rv64:
         slli            a5, a5, 0x2
 #       // initial biases
+        li              t0, 8
+        li              t1, 1024
+        vsetvl          t0, t1, t0 
+
         beqz            a0, non_biases
-        vsetvli         t0, a0, e32
         vle32.v           v0, (a0)
         vrgather.vi     v16, v0, 0
         vrgather.vi     v17, v0, 1
@@ -194,7 +197,6 @@ loop1:
 
         bnez            t3, loop1
 
-
 activation:
         slli            t0, a5, 1
         add             t6, t4, t0
@@ -219,52 +221,24 @@ save_result:
 # 	// store result
         beqz            a7, save_result_nchw
         
-        li              t1, 0
-        vext.x.v        t0, v16, t1
-        sw              t0, 0(a4)
-        vext.x.v        t0, v17, t1
-        sw              t0, 4(a4)
-        vext.x.v        t0, v18, t1
-        sw              t0, 8(a4)
-        vext.x.v        t0, v19, t1
-        sw              t0, 12(a4)
-        
-        li              t1, 1
-        vext.x.v        t0, v16, t1
-        sw              t0, 0(t4)
-        vext.x.v        t0, v17, t1
-        sw              t0, 4(t4)
-        vext.x.v        t0, v18, t1
-        sw              t0, 8(t4)
-        vext.x.v        t0, v19, t1
-        sw              t0, 12(t4)
-        
-        li              t1, 2
-        vext.x.v        t0, v16, t1
-        sw              t0, 0(t5)
-        vext.x.v        t0, v17, t1
-        sw              t0, 4(t5)
-        vext.x.v        t0, v18, t1
-        sw              t0, 8(t5)
-        vext.x.v        t0, v19, t1
-        sw              t0, 12(t5)
-        
-        li              t1, 3
-        vext.x.v        t0, v16, t1
-        sw              t0, 0(t6)
-        vext.x.v        t0, v17, t1
-        sw              t0, 4(t6)
-        vext.x.v        t0, v18, t1
-        sw              t0, 8(t6)
-        vext.x.v        t0, v19, t1
-        sw              t0, 12(t6)
+        li              t0, 16 
+        vsse32.v        v16, (a4), t0
+        addi            a4, a4, 4
+        vsse32.v        v17, (a4), t0
+        addi            a4, a4, 4
+        vsse32.v        v18, (a4), t0
+        addi            a4, a4, 4
+        vsse32.v        v19, (a4), t0
         j               end
-
+        
 save_result_nchw:
         vse32.v           v16, (a4)
-        vse32.v           v17, (t4)
-        vse32.v           v18, (t5)
-        vse32.v           v19, (t6)
+        add               a4, a4, 16
+        vse32.v           v17, (a4)
+        add               a4, a4, 16
+        vse32.v           v18, (a4)
+        add               a4, a4, 16
+        vse32.v           v19, (a4)
 
 end:
 	ret
