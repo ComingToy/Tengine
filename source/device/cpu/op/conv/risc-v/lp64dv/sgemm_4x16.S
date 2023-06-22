@@ -113,7 +113,10 @@ sgemm_4x16_rv64:
     sd              t4, 32(sp)
     sd              t5, 40(sp)
     sd              t6, 48(sp)
-    vsetvli         t0, t1, e32
+
+    li              t1, 1024
+    li              t0, 8
+    vsetvl          t0, t1, t0 
 #     // biases_initial
     beqz            a0, none_biases
     vle32.v           v0, (a0)
@@ -470,178 +473,55 @@ save_result:
     add             t5, t3, t0
 #     // store result
     beqz            a7, save_result_nchw
-    li              t1, 0
-    vext.x.v        t0, v16, t1
-    sw              t0, 0(a4)
-    vext.x.v        t0, v17, t1
-    sw              t0, 4(a4)
-    vext.x.v        t0, v18, t1
-    sw              t0, 8(a4)
-    vext.x.v        t0, v19, t1
-    sw              t0, 12(a4)
-    add             a4, a4, 0x10
-    
-    li              t1, 1
-    vext.x.v        t0, v16, t1
-    sw              t0, 0(t3)
-    vext.x.v        t0, v17, t1
-    sw              t0, 4(t3)
-    vext.x.v        t0, v18, t1
-    sw              t0, 8(t3)
-    vext.x.v        t0, v19, t1
-    sw              t0, 12(t3)
-    add             t3, t3, 0x10
 
-    li              t1, 2
-    vext.x.v        t0, v16, t1
-    sw              t0, 0(t4)
-    vext.x.v        t0, v17, t1
-    sw              t0, 4(t4)
-    vext.x.v        t0, v18, t1
-    sw              t0, 8(t4)
-    vext.x.v        t0, v19, t1
-    sw              t0, 12(t4)
-    add             t4, t4, 0x10
-    
-    li              t1, 3
-    vext.x.v        t0, v16, t1
-    sw              t0, 0(t5)
-    vext.x.v        t0, v17, t1
-    sw              t0, 4(t5)
-    vext.x.v        t0, v18, t1
-    sw              t0, 8(t5)
-    vext.x.v        t0, v19, t1
-    sw              t0, 12(t5)
-    add             t5, t5, 0x10
-    
-    li              t1, 0
-    vext.x.v        t0, v20, t1
-    sw              t0, 0(a4)
-    vext.x.v        t0, v21, t1
-    sw              t0, 4(a4)
-    vext.x.v        t0, v22, t1
-    sw              t0, 8(a4)
-    vext.x.v        t0, v23, t1
-    sw              t0, 12(a4)
-    add             a4, a4, 0x10
-    
-    li              t1, 1
-    vext.x.v        t0, v20, t1
-    sw              t0, 0(t3)
-    vext.x.v        t0, v21, t1
-    sw              t0, 4(t3)
-    vext.x.v        t0, v22, t1
-    sw              t0, 8(t3)
-    vext.x.v        t0, v23, t1
-    sw              t0, 12(t3)
-    add             t3, t3, 0x10
-    
-    li              t1, 2
-    vext.x.v        t0, v20, t1
-    sw              t0, 0(t4)
-    vext.x.v        t0, v21, t1
-    sw              t0, 4(t4)
-    vext.x.v        t0, v22, t1
-    sw              t0, 8(t4)
-    vext.x.v        t0, v23, t1
-    sw              t0, 12(t4)
-    add             t3, t3, 0x10
-    
-    li              t1, 3
-    vext.x.v        t0, v20, t1
-    sw              t0, 0(t5)
-    vext.x.v        t0, v21, t1
-    sw              t0, 4(t5)
-    vext.x.v        t0, v22, t1
-    sw              t0, 8(t5)
-    vext.x.v        t0, v23, t1
-    sw              t0, 12(t5)
-    add             t5, t5, 0x10
-    
-    li              t1, 0
-    vext.x.v        t0, v24, t1
-    sw              t0, 0(a4)
-    vext.x.v        t0, v25, t1
-    sw              t0, 4(a4)
-    vext.x.v        t0, v26, t1
-    sw              t0, 8(a4)
-    vext.x.v        t0, v27, t1
-    sw              t0, 12(a4)
-    add             a4, a4, 0x10
-    
-    li              t1, 1
-    vext.x.v        t0, v24, t1
-    sw              t0, 0(t3)
-    vext.x.v        t0, v25, t1
-    sw              t0, 4(t3)
-    vext.x.v        t0, v26, t1
-    sw              t0, 8(t3)
-    vext.x.v        t0, v27, t1
-    sw              t0, 12(t3)
-    add             t3, t3, 0x10
-    
-    li              t1, 2
-    vext.x.v        t0, v24, t1
-    sw              t0, 0(t4)
-    vext.x.v        t0, v25, t1
-    sw              t0, 4(t4)
-    vext.x.v        t0, v26, t1
-    sw              t0, 8(t4)
-    vext.x.v        t0, v27, t1
-    sw              t0, 12(t4)
-    add             t3, t3, 0x10
-    
-    li              t1, 3
-    vext.x.v        t0, v24, t1
-    sw              t0, 0(t5)
-    vext.x.v        t0, v25, t1
-    sw              t0, 4(t5)
-    vext.x.v        t0, v26, t1
-    sw              t0, 8(t5)
-    vext.x.v        t0, v27, t1
-    sw              t0, 12(t5)
-    add             t5, t5, 0x10
+    li              t1, 64
+    vsse32.v        v16, (a4), t1
 
-    li              t1, 0
-    vext.x.v        t0, v28, t1
-    sw              t0, 0(a4)
-    vext.x.v        t0, v29, t1
-    sw              t0, 4(a4)
-    vext.x.v        t0, v30, t1
-    sw              t0, 8(a4)
-    vext.x.v        t0, v31, t1
-    sw              t0, 12(a4)
-    
-    li              t1, 1
-    vext.x.v        t0, v28, t1
-    sw              t0, 0(t3)
-    vext.x.v        t0, v29, t1
-    sw              t0, 4(t3)
-    vext.x.v        t0, v30, t1
-    sw              t0, 8(t3)
-    vext.x.v        t0, v31, t1
-    sw              t0, 12(t3)
-    
-    li              t1, 2
-    vext.x.v        t0, v28, t1
-    sw              t0, 0(t4)
-    vext.x.v        t0, v29, t1
-    sw              t0, 4(t4)
-    vext.x.v        t0, v30, t1
-    sw              t0, 8(t4)
-    vext.x.v        t0, v31, t1
-    sw              t0, 12(t4)
-    
-    li              t1, 3
-    vext.x.v        t0, v28, t1
-    sw              t0, 0(t5)
-    vext.x.v        t0, v29, t1
-    sw              t0, 4(t5)
-    vext.x.v        t0, v30, t1
-    sw              t0, 8(t5)
-    vext.x.v        t0, v31, t1
-    sw              t0, 12(t5)
-    
+    add             a4, a4, 4
+    vsse32.v        v17, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v18, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v19, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v20, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v21, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v22, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v23, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v24, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v25, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v26, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v27, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v28, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v29, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v30, (a4), t1
+
+    add             a4, a4, 4
+    vsse32.v        v31, (a4), t1
+
     j               end
 
 save_result_nchw:

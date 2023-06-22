@@ -57,7 +57,10 @@ im2col_fp32_1x1:
 	sd      t4, 32(sp)
 	sd      t5, 40(sp)
 	sd      t6, 48(sp)
-	vsetvli	t0, a0, e32
+
+    li      t0, 8
+    li      t1, 1024
+	vsetvl	t0, t1, t0
 	li 		t0, 4
 	blt 	a3, t0, col_end
 	
