@@ -60,7 +60,8 @@ im2col_fp32_1x1:
 
 	li      t0, 8 
 	li      t1, 1024 
-	vsetvl	t0, t1, t0 
+	//vsetvl	t0, t1, t0 
+    vsetvli t1, t0, e32, m1
 
 	li 		t0, 4
 	blt 	a3, t0, col_end

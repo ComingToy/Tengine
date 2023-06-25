@@ -64,7 +64,8 @@ im2col_fp32_3x3:
         sd              t5, 40(sp)
         sd              t6, 48(sp)
         li              t1, 0x8
-        vsetvl          t0, a0, t1
+        //vsetvl          t0, a0, t1
+        vsetvli t1, t0, e32, m1
 	// initial
         beqz            a3, finish
         slli	        a1, a1, 2
@@ -79,34 +80,32 @@ im2col_fp32_3x3:
 
 stride1_channel_loop:
         vle32.v           v0, (a0)
-        addi            t0, a0, 16
-        vle32.v           v1, (t0)
         vle32.v           v2, (t5)
-        addi            t0, t5, 16
-        vle32.v           v3, (t0)
         vle32.v           v4, (t6)
-        addi            t0, t6, 16
-        vle32.v           v5, (t0)
         
         addi             a3, a3, -1
         
         addi            t0, a0, 4
         vle32.v           v16, (t0)
         addi            t0, a0, 8
-        vle32.v           v17, (t0)
+        vle32.v         v17, (t0)
+
         add             a0, a0, a2
         
         addi            t0, t5, 4
-        vle32.v           v19, (t0)
-        
+        vle32.v         v19, (t0)
         addi            t0, t5, 8
         vle32.v           v20, (t0)
+
         add             t5, t5, a2
+
         addi            t0, t6, 4
         vle32.v           v22, (t0)
         addi            t0, t6, 8
         vle32.v           v23, (t0)
+
         add             t6, t6, a2
+
         vse32.v           v0, (a4)
         addi            a4, a4, 16
         vse32.v           v16, (a4)
@@ -171,7 +170,7 @@ stride2_channel_loop:
         vse32.v           v24, (a4)
         addi            a4, a4, 0x10
         
-	add	        a0, a0, a2
+	    add	        a0, a0, a2
         add	        t5, t5, a2
         add	        t6, t6, a2
         

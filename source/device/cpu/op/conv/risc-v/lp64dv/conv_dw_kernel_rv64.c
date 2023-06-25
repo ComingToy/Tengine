@@ -593,7 +593,7 @@ static void convdw5x5s2(float* output, float* input, float* _kernel, float* _bia
     }
 }
 
-int conv_dw_run(struct tensor* input_tensor, struct tensor* weight_tensor, struct tensor* bias_tensor,
+int conv_dw_run(struct node* ir_node, struct tensor* input_tensor, struct tensor* weight_tensor, struct tensor* bias_tensor,
                 struct tensor* output_tensor, struct conv_priv_info* conv_info, struct conv_param* param, int num_thread, int cpu_affinity)
 {
     float* input = (float*)input_tensor->data;

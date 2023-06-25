@@ -116,7 +116,8 @@ sgemm_4x16_rv64:
 
     li              t0, 8
     li              t1, 1024
-    vsetvl          t0, t1, t0 
+    vsetvli t1, t0, e32, m1
+    // vsetvl          t0, t1, t0 
 #     // biases_initial
     beqz            a0, none_biases
     vle32.v           v0, (a0)

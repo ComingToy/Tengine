@@ -88,7 +88,8 @@ sgemm_4x4_rv64:
         
         li              t0, 8
         li              t1, 1024
-        vsetvl          t0, t1, t0
+        //vsetvl          t0, t1, t0
+        vsetvli t1, t0, e32, m1
         vle32.v           v0, (a0)
         vrgather.vi     v16, v0, 0
         vrgather.vi     v17, v0, 1
