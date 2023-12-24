@@ -123,7 +123,7 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
     /* fp32 run */
     if (exec_graph->mode == TENGINE_MODE_FP32)
     {
-        if (conv_hcl_run(ir_node, input_tensor, weight_tensor, bias_tensor, output_tensor, conv_priv_info, conv_param, num_thread,
+        if (conv_hcl_run(input_tensor, weight_tensor, bias_tensor, output_tensor, conv_priv_info, conv_param, num_thread,
                          cpu_affinity)
             < 0)
         {
@@ -219,8 +219,13 @@ static int score(struct node_ops* node_ops, struct exec_graph* exec_graph, struc
     struct node* ir_node = exec_node;
     struct graph* ir_graph = ir_node->graph;
     struct tensor* input_tensor = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[0]);
+    struct tensor* output_tensor = get_ir_graph_tensor(ir_graph, ir_node->output_tensors[0]);
     struct conv_param* param = (struct conv_param*)exec_node->op.param_mem;
     int group = param->group;
+    int kernel_h = param->kernel_h;
+    int kernel_w = param->kernel_w;
+    int in_c = input_tensor->dims[1] / group;
+    int out_c = output_tensor->dims[1] / group;
 
     if (input_tensor->data_type != TENGINE_DT_FP32)
         return 0;
@@ -228,8 +233,9 @@ static int score(struct node_ops* node_ops, struct exec_graph* exec_graph, struc
     if (group != 1)
         return 0;
 
-    return OPS_SCORE_CANDO;
+    return OPS_SCORE_PREFER;
 }
+
 static struct node_ops hcl_node_ops = {
     .prerun = prerun,
     .run = run,
