@@ -14,9 +14,7 @@
 .hidden im2col_fp32_3x3_tile8
 
 im2col_fp32_3x3_tile8:
-    li  t0, 9
-    li  t1, 8
-    // vsetvl t1, t1, t0
+    li  t0, 8
     vsetvli t1, t0, e32, m2
 
     slli    a1, a1, 2

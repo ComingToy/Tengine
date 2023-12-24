@@ -13,9 +13,7 @@
 .hidden im2col_fp32_1x1_tile8
 
 im2col_fp32_1x1_tile8:
-    li  t0, 9
-    li  t1, 1024
-    //vsetvl  t0, t1, t0
+    li  t0, 8
     vsetvli t1, t0, e32, m2
 
     slli    a1, a1, 2

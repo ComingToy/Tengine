@@ -12,9 +12,7 @@
 //a6 kernel_size
 
 sgemm_8x8_rv64:
-    li  t0, 9
-    li  t1, 1024
-    //vsetvl  t0, t1, t0
+    li  t0, 8
     vsetvli t1, t0, e32, m2
 
     srli    t0, a6, 0x2
