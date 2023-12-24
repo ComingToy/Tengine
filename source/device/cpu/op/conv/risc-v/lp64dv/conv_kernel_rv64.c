@@ -30,7 +30,6 @@
 // #include "wino_conv_kernel_arm.h"    // FIXME: add wino support
 // #include "wino_conv_kernel_1_arm.h"  // FIXME: add wino support
 
-extern void print_nxm(const float* buf, int n, int m);
 #define PER_OUT_CHAN 16
 void sgemm_4x16_rv64(float* biases, float* input, float* kernel, long kernel_size, float* output, long output_xy,
                      int activation, int layout);
@@ -172,13 +171,7 @@ static void im2col(float* input, float* col, int in_c, int in_w, int in_h, int k
             int imy3 = (col_i + 3) / out_w;
             int imx0 = col_i - imy0 * out_w;
             int imx3 = (col_i + 3) - imy3 * out_w;
-
-            int imx_start = imx0 * s_w;
-            int imy_start = imy0 * s_h;
-            int imx_end = imx3 * s_w;
-            int imy_end = imy3 * s_h;
-
-            if ((imy0 == imy3) && (is_pad0 || (imx_start >= pad_w0 && imy_start >= pad_h0 && imx_end - pad_w0 + 4 < in_w && imy_end - pad_h0 < in_h)))
+            if ((imy0 == imy3) && (is_pad0 || (imy0 != 0 && imx0 != 0 && imy0 != (out_h - 1) && imx3 != (out_w - 1))))
             {
                 float* l0 = input + (imy0 * s_h - pad_h0) * in_w + (imx0 * s_w - pad_w0);
                 {
@@ -250,6 +243,7 @@ static void im2col(float* input, float* col, int in_c, int in_w, int in_h, int k
         {
             int kernel_size = k_w * k_h * in_c;
             int in_xy = in_w * in_h;
+            int col_end3 = out_xy & 3;
             float* cur_col = col + col_i * kernel_size;
             int cnt_y[4] = {col_i / out_w, (col_i + 1) / out_w, (col_i + 2) / out_w, (col_i + 3) / out_w};
             int cnt_x[4] = {col_i - cnt_y[0] * out_w, col_i - cnt_y[1] * out_w + 1, col_i - cnt_y[2] * out_w + 2,
@@ -306,7 +300,7 @@ static void im2col(float* input, float* col, int in_c, int in_w, int in_h, int k
     }
 }
 
-static void sgemm_set(struct node* ir_node, float* col, float* kernel, float* biases, float* output, int kernel_size, int ch_start,
+static void sgemm_set(float* col, float* kernel, float* biases, float* output, int kernel_size, int ch_start,
                       int ch_end, int output_xy, int activation, int num_thread, int cpu_affinity)
 {
     int nn_outch = ch_end / PER_OUT_CHAN;
@@ -509,6 +503,20 @@ int conv_hcl_get_shared_pack4_mem_size(struct tensor* filter, struct tensor* out
 int conv_hcl_prerun(struct tensor* input_tensor, struct tensor* filter_tensor, struct tensor* output_tensor,
                     struct conv_priv_info* priv_info, struct conv_param* param)
 {
+    int in_c = input_tensor->dims[1];
+    int in_h = input_tensor->dims[2];
+    int in_w = input_tensor->dims[3];
+
+    /* check winograd implement, only for conv3x3s1 */
+    // priv_info->winograd = winograd_support(param, in_h, in_w);
+    // if (priv_info->winograd)
+    // {
+    //     if(in_c >= 256)
+    //         // return wino_conv_hcl_prerun_1(input_tensor, filter_tensor, output_tensor, priv_info, param); // FIXME: add wino support
+    //     else
+    //         // return wino_conv_hcl_prerun(input_tensor, filter_tensor, output_tensor, priv_info, param);   // FIXME: add wino support
+    // }
+
     /* alloc mem of im2col  */
     if (!priv_info->external_im2col_mem)
     {
@@ -555,7 +563,7 @@ int conv_hcl_postrun(struct conv_priv_info* priv_info)
     return 0;
 }
 
-int conv_hcl_run(struct node* ir_node, struct tensor* input_tensor, struct tensor* filter_tensor, struct tensor* bias_tensor,
+int conv_hcl_run(struct tensor* input_tensor, struct tensor* filter_tensor, struct tensor* bias_tensor,
                  struct tensor* output_tensor, struct conv_priv_info* priv_info, struct conv_param* param,
                  int num_thread, int cpu_affinity)
 {
@@ -620,10 +628,9 @@ int conv_hcl_run(struct node* ir_node, struct tensor* input_tensor, struct tenso
 
             /* gemm */
             float* cur_kernel = interleave_buf + g * kernel_size * out_c_align;
-
             float* cur_output = output_buf + n * output_image_size + g * output_size;
             float* cur_bias = biases_buf ? (biases_buf + g * out_c) : NULL;
-            sgemm_set(ir_node, col_buf, cur_kernel, cur_bias, cur_output, kernel_size, 0, sgemm_set_chan, out_hw, act_type,
+            sgemm_set(col_buf, cur_kernel, cur_bias, cur_output, kernel_size, 0, sgemm_set_chan, out_hw, act_type,
                       num_thread, cpu_affinity);
             if (sgemm_set_remain)
                 sgemm4x4(col_buf, cur_kernel, cur_bias, cur_output, kernel_size, sgemm_set_chan, out_c, out_hw,

@@ -44,7 +44,7 @@ int conv_hcl_prerun(struct tensor* input_tensor, struct tensor* filter_tensor, s
 
 int conv_hcl_postrun(struct conv_priv_info* info) __attribute__((weak));
 
-int conv_hcl_run(struct node* ir_node, struct tensor* input_tensor, struct tensor* filter_tensor, struct tensor* bias_tensor,
+int conv_hcl_run(struct tensor* input_tensor, struct tensor* filter_tensor, struct tensor* bias_tensor,
                  struct tensor* output_tensor, struct conv_priv_info* conv_info, struct conv_param* param,
                  int num_thread, int cpu_affinity) __attribute__((weak));
 

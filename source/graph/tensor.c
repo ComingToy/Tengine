@@ -37,7 +37,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
 
 void init_ir_tensor(ir_tensor_t* ir_tensor, int tensor_index, int data_type)
 {
@@ -359,61 +358,4 @@ int set_ir_tensor_consumer(ir_tensor_t* ir_tensor, const int index)
     ir_tensor->consumer_num++;
 
     return 0;
-}
-
-int save_ir_tensor_to_file(ir_tensor_t* tensor)
-{
-    if (!tensor || !tensor->name)
-    {
-        fprintf(stderr, "input tensor or name is null\n");
-        return -1;
-    }
-
-    char fname[256];
-    for (int i = 0; i < sizeof(fname); ++i)
-    {
-        if (tensor->name[i] == '\0')
-        {
-            fname[i] = '\0';
-            break;
-        }
-
-        if (tensor->name[i] == '/')
-        {
-            fname[i] = '_';
-        }
-        else
-        {
-            fname[i] = tensor->name[i];
-        }
-    }
-
-    FILE* fs = fopen(fname, "w+");
-    if (!fs)
-    {
-        fprintf(stderr, "fail to open file %s: %s\n", fname, strerror(errno));
-        return -1;
-    }
-
-    if (tensor->elem_size != 4 || tensor->dim_num != 4)
-    {
-        fprintf(stderr, "%s check elem size and dims error, elem size = %d, dim num = %d\n", tensor->name, tensor->elem_size, tensor->dim_num);
-        return -1;
-    }
-
-    const float* data = tensor->data;
-    int size = tensor->dims[0] * tensor->dims[1] * tensor->dims[2] * tensor->dims[3];
-
-    if (size <= 0)
-    {
-        return -1;
-    }
-    fprintf(fs, "%d %d %d %d\n", tensor->dims[0], tensor->dims[1], tensor->dims[2], tensor->dims[3]);
-    for (int i = 0; i < size; ++i)
-    {
-        fprintf(fs, "%f ", data[i]);
-    }
-    fprintf(fs, "\n");
-    fflush(fs);
-    fclose(fs);
 }

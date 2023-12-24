@@ -193,7 +193,6 @@ void dump_ir_tensor(struct graph* ir_graph, ir_tensor_t* ir_tensor);
  * @return statue value, 0 success, other value failure.
  */
 int set_ir_tensor_consumer(ir_tensor_t* ir_tensor, const int index);
-int save_ir_tensor_to_file(ir_tensor_t* ir_tensor);
 
 #ifdef __cplusplus
 }
