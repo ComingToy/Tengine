@@ -49,7 +49,7 @@
         .global im2col_fp32_1x1
         .hidden im2col_fp32_1x1
 im2col_fp32_1x1:
-	addi    sp, sp, -56
+	addi    sp, sp, -64
 	sd      t0, 0(sp)
 	sd      t1, 8(sp)
 	sd      t2, 16(sp)
@@ -57,7 +57,11 @@ im2col_fp32_1x1:
 	sd      t4, 32(sp)
 	sd      t5, 40(sp)
 	sd      t6, 48(sp)
-	vsetvli	t0, a0, e32
+    sd      ra, 56(sp)
+
+    call    vsetvl_e32_m1
+    ld      ra, 56(sp)
+
 	li 		t0, 4
 	blt 	a3, t0, col_end
 	
@@ -79,21 +83,21 @@ col_loop:
 	add 	t1, t3, a1						
 	// kernel size loop
 channel_loop2:
-	vlw.v 	v0,(t3)
-	vlw.v 	v1,(t1)
+	vle32.v 	v0,(t3)
+	vle32.v 	v1,(t1)
 	addi 	t2, t2, -1
 	add 	t3, t3, t5
 	add 	t1, t1, t5
-	vsw.v 	v0, (a2)
+	vse32.v 	v0, (a2)
 	addi 	a2, a2, 16
-	vsw.v 	v1, (a2)
+	vse32.v 	v1, (a2)
 	addi 	a2, a2, 16
 	bnez	t2, channel_loop2
 
 channel_last:
 	beqz 	t4, channel_loop_end
-	vlw.v 	v0,(t3)
-	vsw.v 	v0, (a2)
+	vle32.v 	v0,(t3)
+	vse32.v 	v0, (a2)
 	addi 	a2, a2, 16
 
 channel_loop_end:
@@ -109,6 +113,6 @@ col_end:
 	ld      t4, 32(sp)
 	ld      t5, 40(sp)
 	ld      t6, 48(sp)
-	addi    sp, sp, 56
+	addi    sp, sp, 64 
 	ret
 	.end
